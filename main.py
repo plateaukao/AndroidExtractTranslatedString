@@ -3,7 +3,7 @@
 from subprocess import check_output
 import re
 import sys
-from os import path
+from os import path, makedirs
 
 INPUT_FOLDER = ""
 OUTPUT_FOLDER = ""
@@ -43,13 +43,34 @@ def find_matched_strings(string_key):
     return info_list
 
 
-def append_string_to_file(file, string):
-    with open(file) as f:
+def append_string_to_file(file_path, string):
+    # create folder if necessary
+    if not path.exists(path.dirname(file_path)):
+        try:
+            makedirs(path.dirname(file_path))
+        except OSError as exc:
+            raise
+
+    # create strings.xml if necessary
+    file_exists = path.isfile(file_path)
+    if not file_exists:
+        print("not exist: " + file_path)
+        print("creating...")
+        create_strings_xml(file_path)
+
+    with open(file_path) as f:
         file_str = f.read()
 
     new_file_string = file_str.replace("</resources>", string + "\n</resources>")
-    with open(file, 'w') as f:
+    with open(file_path, 'w') as f:
         f.write(new_file_string)
+
+
+def create_strings_xml(file_path):
+    with open(file_path, 'w+') as f:
+        f.write("""<xml version="1.0" encoding="utf-8"?>\n"""
+                "<resources>\n"
+                "</resources>\n")
 
 
 if __name__ == '__main__':
@@ -68,8 +89,4 @@ if __name__ == '__main__':
     string_info_list = find_matched_strings(search_key)
     for s in string_info_list:
         new_file_path = OUTPUT_FOLDER + s.folder + "/strings.xml"
-        file_exists = path.isfile(new_file_path)
-        if file_exists:
-            print(new_file_path)
-            append_string_to_file(new_file_path, s.get_string_with_new_key(output_key))
-
+        append_string_to_file(new_file_path, s.get_string_with_new_key(output_key))
